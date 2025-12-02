@@ -50,7 +50,7 @@ class NetworkManager(
     ): Result<T> {
         requireNotNull(user.externalId)
 
-        val url = if (useBaseUri) URL("${config.urlEndpoint}/api/client/$path") else URL(path)
+        val url = if (useBaseUri) URL("${config.urlEndpoint}/client/$path") else URL(path)
         val request = Request.Builder()
             .url(url)
             .get()
@@ -66,7 +66,7 @@ class NetworkManager(
         body: Any,
         useBaseUri: Boolean = true,
     ): Result<T> {
-        val url = if (useBaseUri) URL("${config.urlEndpoint}/api/client/$path") else URL(path)
+        val url = if (useBaseUri) URL("${config.urlEndpoint}/client/$path") else URL(path)
         val requestBody = gson.toJson(body).toRequestBody()
         val request = Request.Builder().url(url)
             .put(requestBody)
@@ -80,7 +80,7 @@ class NetworkManager(
         body: Any,
         useBaseUri: Boolean = true,
     ): Result<T> {
-        val url = if (useBaseUri) URL("${config.urlEndpoint}/api/client/$path") else URL(path)
+        val url = if (useBaseUri) URL("${config.urlEndpoint}/client/$path") else URL(path)
         val requestBody = gson.toJson(body).toRequestBody()
         val request = Request.Builder().url(url)
             .post(requestBody)

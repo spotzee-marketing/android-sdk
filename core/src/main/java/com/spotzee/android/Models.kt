@@ -35,6 +35,7 @@ data class Event(
     val name: String,
     val anonymousId: String,
     val externalId: String?,
+    @SerializedName("data")
     val properties: Map<String, Any>
 )
 
