@@ -12,7 +12,6 @@ import java.util.Date
 
 data class Config(
     val apiKey: String,
-    val urlEndpoint: String,
     val inAppDelegate: InAppDelegate? = null,
     val isDebug: Boolean = false,
 )

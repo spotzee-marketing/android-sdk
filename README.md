@@ -32,11 +32,10 @@ dependencies {
 
 ## Usage
 ### Initialize
-Before using any methods, the library must be initialized with an API key and URL endpoint.
+Before using any methods, the library must be initialized with an API key.
 
-Initialize the library:
 ```kotlin
-val analytics = Spotzee.initialize(context, YOUR_API_KEY, YOUR_URL_ENDPOINT)
+val analytics = Spotzee.initialize(app, "YOUR_API_KEY")
 ```
 
 ### Identify

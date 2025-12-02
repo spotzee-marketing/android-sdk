@@ -14,13 +14,11 @@ class MainApplication : Application(), InAppDelegate {
     override fun onCreate() {
         super.onCreate()
 
-        // TODO: Enter API Key and URL
+        // TODO: Enter your API Key
         val apiKey = "" // like: pk_fdfbi282ec65-4a4f-b9ef-6f6979905523
-        val urlEndpoint = "" // like: https://spotzee.company.com/api
         analytics = Spotzee.initialize(
             app = this,
             apiKey = apiKey,
-            urlEndpoint = urlEndpoint,
             isDebug = true,
             inAppDelegate = this
         )

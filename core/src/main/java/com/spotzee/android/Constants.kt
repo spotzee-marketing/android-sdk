@@ -5,6 +5,7 @@ import java.util.*
 
 class Constants {
     companion object {
+        const val DEFAULT_URL_ENDPOINT: String = "https://apix.spotzee.com/api"
         const val SPOTZEE_KEY: String = "spotzee"
         const val IN_APP_CHECK_MESSAGE_KEY: String = "check_in_app_messages"
 

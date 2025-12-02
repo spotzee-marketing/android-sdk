@@ -453,23 +453,20 @@ open class Spotzee protected constructor(
         private const val LOG_TAG = "Spotzee"
 
         /**
-         * Initialize the library with the required API key and URL endpoint
+         * Initialize the library with the required API key
          * **This must be called before any other methods**
          *
          * @param apiKey A generated public API key
-         * @param urlEndpoint The based domain of the hosted Spotzee instance
          *
          */
         fun initialize(
             app: Application,
             apiKey: String,
-            urlEndpoint: String,
             inAppDelegate: InAppDelegate? = null,
             isDebug: Boolean = false
         ): Spotzee {
             require(apiKey.isNotEmpty())
-            require(urlEndpoint.isNotEmpty())
-            return initialize(app, Config(apiKey, urlEndpoint, inAppDelegate, isDebug))
+            return initialize(app, Config(apiKey, inAppDelegate, isDebug))
         }
 
         /**
