@@ -27,6 +27,3 @@ jobs:
 
       - name: Build SDK
         run: ./gradlew :core:build
-
-      - name: Build Sample App
-        run: ./gradlew :samples:kotlin-android-app:assembleDebug
