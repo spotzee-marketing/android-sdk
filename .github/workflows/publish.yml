@@ -1,0 +1,62 @@
+name: Publish Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    if: github.repository_owner == 'spotzee-marketing'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build SDK
+        run: ./gradlew :core:build
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ github.ref_name }}
+          body: |
+            ## Installation
+
+            Add JitPack repository to your settings.gradle:
+            ```gradle
+            dependencyResolutionManagement {
+                repositories {
+                    maven { url 'https://jitpack.io' }
+                }
+            }
+            ```
+
+            Add the dependency:
+            ```gradle
+            implementation 'com.github.spotzee-marketing:android-sdk:${{ steps.get_version.outputs.VERSION }}'
+            ```
+
+            ## What's Changed
+            See the [full changelog](https://github.com/spotzee-marketing/android-sdk/compare/v${{ steps.get_version.outputs.VERSION }}...HEAD)
+          draft: false
+          prerelease: false
+          files: |
+            core/build/outputs/aar/*.aar

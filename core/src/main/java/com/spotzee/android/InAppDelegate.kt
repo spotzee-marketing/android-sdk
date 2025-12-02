@@ -1,0 +1,30 @@
+package com.spotzee.android
+
+enum class InAppDisplayState {
+    SHOW,
+    SKIP,
+    CONSUME
+}
+
+interface InAppDelegate {
+
+    val autoShow: Boolean
+        get() = true
+
+    val useDarkMode: Boolean
+        get() = false
+
+    fun onNew(notification: SpotzeeNotification): InAppDisplayState {
+        return InAppDisplayState.SHOW
+    }
+
+    fun handle(action: InAppAction, context: Map<String, Any>, notification: SpotzeeNotification)
+
+    fun onError(error: Throwable) {
+        // Default empty implementation
+    }
+
+    fun onNotificationShown(notification: SpotzeeNotification) {
+        // Default empty implementation
+    }
+}
