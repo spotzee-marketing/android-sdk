@@ -1,8 +1,10 @@
 [![](https://jitpack.io/v/spotzee-marketing/android-sdk.svg)](https://jitpack.io/#spotzee-marketing/android-sdk)
 
 <p align="center">
-  <img width="400" alt="Spotzee Logo" src=".github/assets/logo-light.svg#gh-light-mode-only" />
-  <img width="400" alt="Spotzee Logo" src=".github/assets/logo-dark.svg#gh-dark-mode-only" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/logo-dark.svg">
+    <img width="400" alt="Spotzee Logo" src=".github/assets/logo-light.svg">
+  </picture>
 </p>
 
 # Spotzee Android SDK
