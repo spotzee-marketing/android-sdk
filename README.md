@@ -2,8 +2,19 @@
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/logo-dark.svg">
-    <img width="400" alt="Spotzee Logo" src=".github/assets/logo-light.svg">
+    <source
+      media="(prefers-color-scheme: dark)"
+      srcset="https://raw.githubusercontent.com/spotzee-marketing/android-sdk/main/.github/assets/logo-dark.svg"
+    />
+    <source
+      media="(prefers-color-scheme: light)"
+      srcset="https://raw.githubusercontent.com/spotzee-marketing/android-sdk/main/.github/assets/logo-light.svg"
+    />
+    <img
+      width="400"
+      alt="Spotzee Logo"
+      src="https://raw.githubusercontent.com/spotzee-marketing/android-sdk/main/.github/assets/logo-light.svg"
+    />
   </picture>
 </p>
 
