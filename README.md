@@ -72,6 +72,18 @@ analytics.track(
 )
 ```
 
+You can also update user profile fields inline with the event:
+```kotlin
+analytics.track(
+    event = "Tapped Button",
+    properties = emptyMap(),
+    user = TrackUser(
+        timezone = "America/New_York",
+        locale = "en-US"
+    )
+)
+```
+
 ### Register Device
 In order to send push notifications to a given device you need to register for notifications and then register the device with Spotzee. You can do so by using the `register` method. If a user does not grant access to send notifications, you can also call this method without a token to register device characteristics.
 ```kotlin

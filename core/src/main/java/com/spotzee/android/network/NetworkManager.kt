@@ -9,6 +9,7 @@ import com.spotzee.android.Config
 import com.spotzee.android.Constants
 import com.spotzee.android.NotificationContent
 import com.spotzee.android.SpotzeeNotification
+import com.spotzee.android.TrackUser
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -27,6 +28,7 @@ class NetworkManager(
         .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
         .registerTypeAdapter(Date::class.java, DateAdapter())
         .registerTypeAdapter(SpotzeeNotification::class.java, SpotzeeNotificationDeserializer())
+        .registerTypeAdapterFactory(TrackUserAdapterFactory())
         .create()
 
     private val httpLoggingInterceptor: HttpLoggingInterceptor

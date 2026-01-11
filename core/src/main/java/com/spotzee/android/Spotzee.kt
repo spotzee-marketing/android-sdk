@@ -149,14 +149,22 @@ open class Spotzee protected constructor(
      * Send events for both anonymous and identified users to Spotzee to
      * trigger journeys or lists.
      *
+     * You can optionally include user profile fields to update inline with the event.
+     *
      * @param event A string name of the event
      * @param properties A dictionary of attributes associated to the event
+     * @param user Optional user profile fields to update (email, phone, timezone, locale, data)
      */
-    fun track(event: String, properties: Map<String, Any> = emptyMap()) {
+    fun track(
+        event: String,
+        properties: Map<String, Any> = emptyMap(),
+        user: TrackUser? = null
+    ) {
         val event = Event(
             name = event,
             anonymousId = getOrAndOrSetAnonymousId(),
             externalId = externalId,
+            user = user,
             properties = properties
         )
         libraryScope.launch {

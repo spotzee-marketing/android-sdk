@@ -30,10 +30,19 @@ data class Alias(
     val externalId: String?
 )
 
+data class TrackUser(
+    val email: String? = null,
+    val phone: String? = null,
+    val timezone: String? = null,
+    val locale: String? = null,
+    val data: Map<String, Any>? = null
+)
+
 data class Event(
     val name: String,
     val anonymousId: String,
     val externalId: String?,
+    val user: TrackUser? = null,
     @SerializedName("data")
     val properties: Map<String, Any>
 )
