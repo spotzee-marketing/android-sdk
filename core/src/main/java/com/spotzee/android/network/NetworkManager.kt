@@ -96,17 +96,22 @@ class NetworkManager(
             .addHeader("Content-Type", "application/json")
             .addHeader("Accept", "application/json")
             .addHeader("Authorization", "Bearer ${config.apiKey}")
+            .addHeader("Spotzee-Version", Constants.SPOTZEE_API_VERSION)
+            .addHeader("x-spotzee-client-type", Constants.CLIENT_TYPE)
 
     private suspend inline fun <reified T> execute(request: Request): Result<T> {
         try {
             val response = client.newCall(request).executeAsync()
             if (!response.isSuccessful) {
-                return Result.failure(IOException("Invalid status code ${response.code}, body: ${response.body.string()}"))
+                val rawBody = response.body.string()
+                val requestId = response.header("X-Request-Id")
+                return Result.failure(parseError(response.code, rawBody, requestId))
             }
             val isValid = (200 until 299).contains(response.code)
 
             if (!isValid) {
-                return Result.failure(Exception("Invalid status code ${response.code}"))
+                val requestId = response.header("X-Request-Id")
+                return Result.failure(parseError(response.code, "", requestId))
             }
             val typeToken = object : TypeToken<T>() {}
 
@@ -120,5 +125,39 @@ class NetworkManager(
         } catch (e: IOException) {
             return Result.failure(e)
         }
+    }
+
+    /**
+     * Best-effort parse of the new RFC 7807 error envelope (Spotzee API
+     * 2026-04-28+). Falls back to the legacy shape when fields are missing,
+     * so this works across the cutover window.
+     */
+    private fun parseError(statusCode: Int, body: String, requestId: String?): Throwable {
+        var code: String? = null
+        var message: String? = null
+        var bodyRequestId: String? = null
+        if (body.isNotEmpty()) {
+            try {
+                @Suppress("UNCHECKED_CAST")
+                val parsed = gson.fromJson(body, Map::class.java) as? Map<String, Any?>
+                if (parsed != null) {
+                    code = parsed["code"] as? String
+                    message = (parsed["message"] as? String) ?: (parsed["error"] as? String)
+                    bodyRequestId = parsed["request_id"] as? String
+                }
+            } catch (_: Exception) {
+                // Not JSON or not the expected shape — fall through to a plain HTTP error.
+            }
+        }
+        val resolvedRequestId = requestId ?: bodyRequestId
+        val parts = mutableListOf("HTTP $statusCode")
+        if (code != null) parts.add("code=$code")
+        if (message != null) parts.add(message)
+        if (resolvedRequestId != null) parts.add("request_id=$resolvedRequestId")
+        if (body.isNotEmpty() && code == null && message == null) {
+            // Couldn't parse a structured envelope; surface the raw body for diagnostics.
+            parts.add("body=$body")
+        }
+        return IOException(parts.joinToString(separator = " | "))
     }
 }
