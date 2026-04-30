@@ -24,7 +24,7 @@
 Installing the Spotzee Android SDK will provide you with user identification, deeplink unwrapping and basic tracking functionality. The Android SDK is available through JitPack or through manual installation.
 
 ### Version Information
-- The Spotzee Android SDK supports SDK 21+
+- The Spotzee Android SDK supports Android SDK 23+ (Android 6.0 Marshmallow and later)
 
 ### Install the SDK
 In your **settings.gradle** add the JitPack repository:
@@ -52,7 +52,7 @@ val analytics = Spotzee.initialize(app, "YOUR_API_KEY")
 ```
 
 ### Identify
-You can handle the user identity of your users by using the `identify` method. This method works in combination either/or associate a given user to your internal user ID (`external_id`) or to associate attributes (traits) to the user. By default all events and traits are associated with an anonymous ID until a user is identified with an `external_id`. From that point moving forward, all updates to the user and events will be associated to your provider identifier.
+You can handle the user identity of your users by using the `identify` method. This method works in combination either/or associate a given user to your internal user ID (`external_id`) or to associate attributes (traits) to the user. By default all events and traits are associated with an anonymous ID until a user is identified with an `external_id`. From that point moving forward, all updates to the user and events will be associated to your `external_id`.
 ```kotlin
 analytics.identify(
     id = USER_ID,

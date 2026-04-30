@@ -77,7 +77,7 @@ data class Device(
         model = Build.MODEL,
         appBuild = appBuild.toString(),
         appVersion = appVersion,
-        sdkVersion = "1.0.0",
+        sdkVersion = BuildConfig.SDK_VERSION,
     )
 }
 
