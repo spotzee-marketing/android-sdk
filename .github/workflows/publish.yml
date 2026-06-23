@@ -51,11 +51,11 @@ jobs:
 
             Add the dependency:
             ```gradle
-            implementation 'com.github.spotzee-marketing:android-sdk:${{ steps.get_version.outputs.VERSION }}'
+            implementation 'com.github.spotzee-marketing:android-sdk:${{ github.ref_name }}'
             ```
 
             ## What's Changed
-            See the [full changelog](https://github.com/spotzee-marketing/android-sdk/compare/v${{ steps.get_version.outputs.VERSION }}...HEAD)
+            See the [full changelog](https://github.com/spotzee-marketing/android-sdk/compare/${{ github.ref_name }}...HEAD)
           draft: false
           prerelease: false
           files: |

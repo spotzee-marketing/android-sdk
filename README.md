@@ -39,7 +39,7 @@ dependencyResolutionManagement {
 In your **build.gradle** add:
 ```gradle
 dependencies {
-    implementation 'com.github.spotzee-marketing:android-sdk:0.2.2'
+    implementation 'com.github.spotzee-marketing:android-sdk:v0.2.2'
 }
 ```
 
