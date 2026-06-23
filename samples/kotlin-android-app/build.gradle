@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace "com.spotzee.example"
+    namespace = "com.spotzee.example"
     compileSdkVersion 36
 
     defaultConfig {

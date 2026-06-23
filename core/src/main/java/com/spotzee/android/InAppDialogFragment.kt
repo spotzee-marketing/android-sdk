@@ -9,9 +9,6 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.WindowManager
-import android.view.WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR
-import android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
 import android.webkit.JavascriptInterface
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -19,6 +16,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.os.bundleOf
+import androidx.core.view.WindowCompat
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.lifecycleScope
 import com.google.gson.Gson
@@ -163,10 +161,8 @@ class InAppDialogFragment : DialogFragment() {
     }
 
     private fun setWindowTransitions() {
-        dialog?.window?.apply {
-            val flagsToUpdate = FLAG_LAYOUT_IN_SCREEN or FLAG_LAYOUT_INSET_DECOR
-            setFlags(flagsToUpdate, flagsToUpdate)
-            decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
+        dialog?.window?.let { window ->
+            WindowCompat.setDecorFitsSystemWindows(window, false)
         }
     }
 
