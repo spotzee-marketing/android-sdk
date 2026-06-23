@@ -5,8 +5,11 @@ plugins {
     id 'maven-publish'
 }
 
-group = PACKAGE
-version = VERSION
+def releaseGroup = System.getenv('JITPACK') == 'true' && System.getenv('GROUP') ? System.getenv('GROUP') : PACKAGE
+def releaseVersion = System.getenv('JITPACK') == 'true' && System.getenv('VERSION') ? System.getenv('VERSION').replaceFirst('^v', '') : VERSION
+
+group = releaseGroup
+version = releaseVersion
 
 android {
     compileSdkVersion 36
@@ -61,9 +64,9 @@ afterEvaluate {
             // Creates a Maven publication called "release".
             release(MavenPublication) {
                 from components.release
-                groupId = PACKAGE
+                groupId = releaseGroup
                 artifactId = ARTIFACT
-                version = VERSION
+                version = releaseVersion
             }
         }
     }
