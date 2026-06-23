@@ -79,7 +79,7 @@ class MyFirebaseService : FirebaseMessagingService() {
             append("\n")
             append(key)
             append(": ")
-            append(get(key) ?: "N/A")
+            append(getString(key) ?: "N/A")
         }
     }.toString()
 

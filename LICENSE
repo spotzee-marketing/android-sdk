@@ -39,7 +39,7 @@ For licensing inquiries or permission requests, contact: contact@spotzee.com
 
 THIRD-PARTY NOTICES
 
-This software incorporates code from the Parcelvoy Android SDK:
+This software incorporates MIT-licensed code from the upstream SDK:
 
 MIT License
 Copyright (c) 2024 Parcelvoy
