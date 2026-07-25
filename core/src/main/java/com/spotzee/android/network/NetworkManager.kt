@@ -101,26 +101,27 @@ class NetworkManager(
 
     private suspend inline fun <reified T> execute(request: Request): Result<T> {
         try {
-            val response = client.newCall(request).executeAsync()
-            if (!response.isSuccessful) {
-                val rawBody = response.body.string()
-                val requestId = response.header("X-Request-Id")
-                return Result.failure(parseError(response.code, rawBody, requestId))
-            }
-            val isValid = (200 until 299).contains(response.code)
+            client.newCall(request).executeAsync().use { response ->
+                if (!response.isSuccessful) {
+                    val rawBody = response.body.string()
+                    val requestId = response.header("X-Request-Id")
+                    return Result.failure(parseError(response.code, rawBody, requestId))
+                }
+                val isValid = (200 until 299).contains(response.code)
 
-            if (!isValid) {
-                val requestId = response.header("X-Request-Id")
-                return Result.failure(parseError(response.code, "", requestId))
-            }
-            val typeToken = object : TypeToken<T>() {}
+                if (!isValid) {
+                    val requestId = response.header("X-Request-Id")
+                    return Result.failure(parseError(response.code, "", requestId))
+                }
+                val typeToken = object : TypeToken<T>() {}
 
-            // Handle cases where T might be Unit (for responses with no body expected)
-            if (typeToken.type == Unit::class.java || typeToken.rawType == Nothing::class.java) {
-                return Result.success(Unit as T)
-            } else {
-                val parsedObject: T = gson.fromJson(response.body.string(), typeToken.type)
-                return Result.success(parsedObject)
+                // Handle cases where T might be Unit (for responses with no body expected)
+                if (typeToken.type == Unit::class.java || typeToken.rawType == Nothing::class.java) {
+                    return Result.success(Unit as T)
+                } else {
+                    val parsedObject: T = gson.fromJson(response.body.string(), typeToken.type)
+                    return Result.success(parsedObject)
+                }
             }
         } catch (e: IOException) {
             return Result.failure(e)
