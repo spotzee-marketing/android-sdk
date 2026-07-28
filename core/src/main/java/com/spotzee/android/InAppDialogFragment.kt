@@ -3,13 +3,15 @@ package com.spotzee.android
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.graphics.Color
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.webkit.JavascriptInterface
+import android.webkit.WebMessage
+import android.webkit.WebMessagePort
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
@@ -19,15 +21,13 @@ import androidx.core.os.bundleOf
 import androidx.core.view.WindowCompat
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.lifecycleScope
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class InAppDialogFragment : DialogFragment() {
 
     private var webView: WebView? = null
-    private val gson = Gson()
+    private var bridgePort: WebMessagePort? = null
 
     private val webViewClient = object : WebViewClient() {
         override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
@@ -35,6 +35,8 @@ class InAppDialogFragment : DialogFragment() {
             Log.d(DIALOG_TAG, "WebView trying to load URL: $url")
 
             if (url.scheme == Constants.SPOTZEE_KEY) {
+                if (!request.isForMainFrame) return true
+
                 when (url.host) { // e.g., spotzee://dismiss, spotzee://custom
                     "dismiss" -> processAction(InAppAction.DISMISS)
                     "custom" -> {
@@ -48,6 +50,8 @@ class InAppDialogFragment : DialogFragment() {
                 }
                 return true
             }
+
+            if (!request.isForMainFrame) return false
 
             // For any other URLs, open them in an external browser
             // This prevents the WebView from navigating away from your in-app message content.
@@ -65,11 +69,7 @@ class InAppDialogFragment : DialogFragment() {
         override fun onPageFinished(view: WebView, url: String) {
             super.onPageFinished(view, url)
 
-            val dismissScript = "window.dismiss = function() { SpotzeeJSBridge.postMessage('dismiss', ''); };"
-            val triggerScript = "window.trigger = function(obj) { SpotzeeJSBridge.postMessage('custom', JSON.stringify(obj)); };"
-
-            view.evaluateJavascript(dismissScript, null)
-            view.evaluateJavascript(triggerScript, null)
+            configureBridge(view)
             setThemeJs()
 
             notification?.let { delegate?.onNotificationShown(it) }
@@ -104,7 +104,7 @@ class InAppDialogFragment : DialogFragment() {
         setStyle(STYLE_NORMAL, R.style.FullScreenDialogTheme)
     }
 
-    @SuppressLint("SetJavaScriptEnabled", "AddJavascriptInterface")
+    @SuppressLint("SetJavaScriptEnabled")
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -117,7 +117,6 @@ class InAppDialogFragment : DialogFragment() {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             setBackgroundColor(Color.TRANSPARENT)
-            addJavascriptInterface(WebAppInterface(), "SpotzeeJSBridge")
         }
 
         webViewContainer.addView(
@@ -130,8 +129,13 @@ class InAppDialogFragment : DialogFragment() {
         webView?.webViewClient = webViewClient
         when (val content = notification?.content) {
             is HtmlNotification -> {
-                // baseURL can be null, or set to a dummy file:// URL if you have local assets to resolve
-                webView?.loadDataWithBaseURL(null, content.html, "text/html", "UTF-8", null)
+                webView?.loadDataWithBaseURL(
+                    IN_APP_BRIDGE_BASE_URL,
+                    content.html,
+                    "text/html",
+                    "UTF-8",
+                    null,
+                )
             }
             else -> {
                 Log.e(DIALOG_TAG, "Notification content is not HTML. Cannot display in WebView.")
@@ -176,59 +180,46 @@ class InAppDialogFragment : DialogFragment() {
         webView?.evaluateJavascript("javascript: $function", null)
     }
 
-    /**
-     * JavaScript Interface object
-     * Methods annotated with @JavascriptInterface are callable from JavaScript.
-     */
-    inner class WebAppInterface {
-        @JavascriptInterface
-        fun postMessage(actionName: String, jsonPayload: String?) {
-            Log.d(DIALOG_TAG, "JSBridge received: $actionName with payload: $jsonPayload")
-
-            val action = InAppAction.entries.find { it.name.equals(actionName, ignoreCase = true) }
-            if (action == null) {
-                Log.w(DIALOG_TAG, "Unknown action from JSBridge: $actionName")
-                // Default to custom if the name isn't 'dismiss' and not found,
-                // or handle as an error.
-                if (actionName.equals("custom", ignoreCase = true)) {
-                    val body: Map<String, Any> = if (!jsonPayload.isNullOrEmpty()) {
-                        try {
-                            val type = object : TypeToken<Map<String, Any>>() {}.type
-                            gson.fromJson(jsonPayload, type)
-                        } catch (e: Exception) {
-                            Log.e(DIALOG_TAG, "Error parsing JSON payload for custom action", e)
-                            mapOf("payload" to jsonPayload) // Fallback
-                        }
-                    } else {
-                        emptyMap()
+    private fun configureBridge(view: WebView) {
+        bridgePort?.close()
+        val ports = view.createWebMessageChannel()
+        bridgePort = ports[0].apply {
+            setWebMessageCallback(object : WebMessagePort.WebMessageCallback() {
+                override fun onMessage(port: WebMessagePort, message: WebMessage?) {
+                    val bridgeMessage = decodeInAppBridgeMessage(
+                        rawMessage = message?.data,
+                        isMainFrame = true,
+                    )
+                    if (bridgeMessage == null) {
+                        Log.w(DIALOG_TAG, "Rejected malformed in-app bridge message")
+                        return
                     }
-
                     activity?.runOnUiThread {
-                        processAction(InAppAction.CUSTOM, body)
+                        processAction(bridgeMessage.action, bridgeMessage.context)
                     }
                 }
-                return
-            }
+            })
+        }
 
-            when (action) {
-                InAppAction.DISMISS -> activity?.runOnUiThread {
-                    processAction(InAppAction.DISMISS)
-                }
-                InAppAction.CUSTOM -> activity?.runOnUiThread {
-                    val body: Map<String, Any> = if (!jsonPayload.isNullOrEmpty()) {
-                        try {
-                            val type = object : TypeToken<Map<String, Any>>() {}.type
-                            gson.fromJson(jsonPayload, type)
-                        } catch (e: Exception) {
-                            Log.e(DIALOG_TAG, "Error parsing JSON payload for custom action", e)
-                            mapOf("payload" to jsonPayload) // Fallback: pass raw string if not JSON
-                        }
-                    } else {
-                        emptyMap()
-                    }
-                    processAction(InAppAction.CUSTOM, body)
-                }
-            }
+        val installBridge = """
+            (function () {
+                window.addEventListener('message', function (event) {
+                    if (event.data !== '$IN_APP_BRIDGE_INIT' || !event.ports || event.ports.length !== 1) return;
+                    var port = event.ports[0];
+                    window.dismiss = function () {
+                        port.postMessage(JSON.stringify({ action: 'dismiss' }));
+                    };
+                    window.trigger = function (obj) {
+                        port.postMessage(JSON.stringify({ action: 'custom', payload: obj }));
+                    };
+                }, { once: true });
+            })();
+        """.trimIndent()
+        view.evaluateJavascript(installBridge) {
+            view.postWebMessage(
+                WebMessage(IN_APP_BRIDGE_INIT, arrayOf(ports[1])),
+                Uri.parse(IN_APP_BRIDGE_ORIGIN),
+            )
         }
     }
 
@@ -255,8 +246,9 @@ class InAppDialogFragment : DialogFragment() {
     }
 
     override fun onDestroyView() {
-        // Important to null out WebView to prevent leaks
-        webView?.destroy() // Use destroy to release resources
+        bridgePort?.close()
+        bridgePort = null
+        webView?.destroy()
         webView = null
         super.onDestroyView()
     }
