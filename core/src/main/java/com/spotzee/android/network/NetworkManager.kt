@@ -46,6 +46,11 @@ class NetworkManager(
         .addInterceptor(httpLoggingInterceptor)
         .build()
 
+    private val clickTrackingClient: OkHttpClient = client.newBuilder()
+        .followRedirects(false)
+        .followSslRedirects(false)
+        .build()
+
     internal suspend inline fun <reified T> get(
         path: String,
         user: Alias,
@@ -62,6 +67,29 @@ class NetworkManager(
             .addHeader("x-external-id", user.externalId)
             .build()
         return execute(request)
+    }
+
+    internal suspend fun trackClick(url: String): Result<Unit> {
+        val request = try {
+            Request.Builder()
+                .url(url)
+                .get()
+                .build()
+        } catch (error: IllegalArgumentException) {
+            return Result.failure(error)
+        }
+
+        return try {
+            clickTrackingClient.newCall(request).executeAsync().use { response ->
+                if (response.code in 200 until 400) {
+                    Result.success(Unit)
+                } else {
+                    Result.failure(IOException("HTTP ${response.code}"))
+                }
+            }
+        } catch (error: IOException) {
+            Result.failure(error)
+        }
     }
 
     internal suspend inline fun <reified T> put(

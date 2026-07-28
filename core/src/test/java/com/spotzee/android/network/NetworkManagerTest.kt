@@ -6,8 +6,10 @@ import kotlinx.coroutines.runBlocking
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import okhttp3.Headers.Companion.headersOf
 import java.util.concurrent.TimeUnit
 
 class NetworkManagerTest {
@@ -39,6 +41,9 @@ class NetworkManagerTest {
             assertTrue(secondResult.isSuccess)
             val firstRequest = requireNotNull(server.takeRequest(1, TimeUnit.SECONDS))
             val secondRequest = requireNotNull(server.takeRequest(1, TimeUnit.SECONDS))
+            assertEquals("Bearer public-test-key", firstRequest.headers["Authorization"])
+            assertEquals(user.anonymousId, firstRequest.headers["x-anonymous-id"])
+            assertEquals(user.externalId, firstRequest.headers["x-external-id"])
             assertEquals(firstRequest.connectionIndex, secondRequest.connectionIndex)
             assertEquals(1, secondRequest.exchangeIndex)
         }
@@ -69,6 +74,54 @@ class NetworkManagerTest {
             val secondRequest = requireNotNull(server.takeRequest(1, TimeUnit.SECONDS))
             assertEquals(firstRequest.connectionIndex, secondRequest.connectionIndex)
             assertEquals(1, secondRequest.exchangeIndex)
+        }
+    }
+
+    @Test
+    fun clickTrackingDoesNotSendIdentityHeadersOrFollowRedirects() = runBlocking {
+        MockWebServer().use { trackingServer ->
+            MockWebServer().use { destinationServer ->
+                trackingServer.start()
+                destinationServer.start()
+                trackingServer.enqueue(
+                    MockResponse(
+                        code = 303,
+                        headers = headersOf(
+                            "Location",
+                            destinationServer.url("/destination").toString(),
+                        ),
+                    ),
+                )
+                val manager = NetworkManager(Config(apiKey = "public-test-key"))
+
+                val result = manager.trackClick(
+                    trackingServer.url("/c?r=https%3A%2F%2Fexample.com").toString(),
+                )
+
+                assertTrue(result.isSuccess)
+                val request = requireNotNull(trackingServer.takeRequest(1, TimeUnit.SECONDS))
+                assertNull(request.headers["Authorization"])
+                assertNull(request.headers["x-anonymous-id"])
+                assertNull(request.headers["x-external-id"])
+                assertNull(destinationServer.takeRequest(250, TimeUnit.MILLISECONDS))
+            }
+        }
+    }
+
+    @Test
+    fun clickTrackingAcceptsSuccessfulTrackingResponse() = runBlocking {
+        MockWebServer().use { trackingServer ->
+            trackingServer.start()
+            trackingServer.enqueue(MockResponse(code = 204))
+            val manager = NetworkManager(Config(apiKey = "public-test-key"))
+
+            val result = manager.trackClick(
+                trackingServer.url("/c?r=https%3A%2F%2Fexample.com").toString(),
+            )
+
+            assertTrue(result.isSuccess)
+            val request = requireNotNull(trackingServer.takeRequest(1, TimeUnit.SECONDS))
+            assertEquals("/c", request.url.encodedPath)
         }
     }
 
