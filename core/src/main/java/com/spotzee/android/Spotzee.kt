@@ -18,8 +18,16 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.lang.ref.WeakReference
 import java.util.*
+
+internal fun isSpotzeeTrackingLink(url: String): Boolean {
+    val parsedUrl = url.toHttpUrlOrNull() ?: return false
+    return parsedUrl.isHttps &&
+        parsedUrl.encodedPath == "/c" &&
+        parsedUrl.queryParameter("r") != null
+}
 
 open class Spotzee protected constructor(
     app: Application,
@@ -359,16 +367,7 @@ open class Spotzee protected constructor(
 
         // Run the URL so that the redirect events get triggered at API
         libraryScope.launch {
-            // Assuming 'network.get' is a suspend function for making GET requests.
-            // Replace with your actual network call implementation.
-            network.get<Unit>(
-                path = universalLink.toString(),
-                useBaseUri = false, // Assuming the universalLink is a full URL
-                user = Alias( // Replace with your actual User/Alias structure
-                    anonymousId = getOrAndOrSetAnonymousId(),
-                    externalId = externalId
-                )
-            )
+            network.trackClick(universalLink.toString())
         }
 
         // Manually redirect to the URL included in the parameter
@@ -424,14 +423,7 @@ open class Spotzee protected constructor(
 
         /// Run the URL so that the redirect events get triggered at API
         libraryScope.launch {
-            network.get<Unit>(
-                path = universalLink.toString(),
-                useBaseUri = false,
-                user = Alias(
-                    anonymousId = getOrAndOrSetAnonymousId(),
-                    externalId = externalId
-                ),
-            )
+            network.trackClick(universalLink.toString())
         }
 
         /// Return the URI included in the parameter
@@ -439,8 +431,7 @@ open class Spotzee protected constructor(
     }
 
     fun isSpotzeeDeepLink(uri: Uri): Boolean {
-        uri.getQueryParameter("r") ?: return false
-        return uri.path?.endsWith("/c") == true || uri.path?.contains("/c/") == true
+        return isSpotzeeTrackingLink(uri.toString())
     }
 
     private suspend fun postEvent(events: List<Event>, retries: Int = 3) {

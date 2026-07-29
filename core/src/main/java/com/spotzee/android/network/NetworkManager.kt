@@ -46,6 +46,11 @@ class NetworkManager(
         .addInterceptor(httpLoggingInterceptor)
         .build()
 
+    private val clickTrackingClient: OkHttpClient = client.newBuilder()
+        .followRedirects(false)
+        .followSslRedirects(false)
+        .build()
+
     internal suspend inline fun <reified T> get(
         path: String,
         user: Alias,
@@ -62,6 +67,29 @@ class NetworkManager(
             .addHeader("x-external-id", user.externalId)
             .build()
         return execute(request)
+    }
+
+    internal suspend fun trackClick(url: String): Result<Unit> {
+        val request = try {
+            Request.Builder()
+                .url(url)
+                .get()
+                .build()
+        } catch (error: IllegalArgumentException) {
+            return Result.failure(error)
+        }
+
+        return try {
+            clickTrackingClient.newCall(request).executeAsync().use { response ->
+                if (response.code in 200 until 400) {
+                    Result.success(Unit)
+                } else {
+                    Result.failure(IOException("HTTP ${response.code}"))
+                }
+            }
+        } catch (error: IOException) {
+            Result.failure(error)
+        }
     }
 
     internal suspend inline fun <reified T> put(
@@ -101,26 +129,27 @@ class NetworkManager(
 
     private suspend inline fun <reified T> execute(request: Request): Result<T> {
         try {
-            val response = client.newCall(request).executeAsync()
-            if (!response.isSuccessful) {
-                val rawBody = response.body.string()
-                val requestId = response.header("X-Request-Id")
-                return Result.failure(parseError(response.code, rawBody, requestId))
-            }
-            val isValid = (200 until 299).contains(response.code)
+            client.newCall(request).executeAsync().use { response ->
+                if (!response.isSuccessful) {
+                    val rawBody = response.body.string()
+                    val requestId = response.header("X-Request-Id")
+                    return Result.failure(parseError(response.code, rawBody, requestId))
+                }
+                val isValid = (200 until 299).contains(response.code)
 
-            if (!isValid) {
-                val requestId = response.header("X-Request-Id")
-                return Result.failure(parseError(response.code, "", requestId))
-            }
-            val typeToken = object : TypeToken<T>() {}
+                if (!isValid) {
+                    val requestId = response.header("X-Request-Id")
+                    return Result.failure(parseError(response.code, "", requestId))
+                }
+                val typeToken = object : TypeToken<T>() {}
 
-            // Handle cases where T might be Unit (for responses with no body expected)
-            if (typeToken.type == Unit::class.java || typeToken.rawType == Nothing::class.java) {
-                return Result.success(Unit as T)
-            } else {
-                val parsedObject: T = gson.fromJson(response.body.string(), typeToken.type)
-                return Result.success(parsedObject)
+                // Handle cases where T might be Unit (for responses with no body expected)
+                if (typeToken.type == Unit::class.java || typeToken.rawType == Nothing::class.java) {
+                    return Result.success(Unit as T)
+                } else {
+                    val parsedObject: T = gson.fromJson(response.body.string(), typeToken.type)
+                    return Result.success(parsedObject)
+                }
             }
         } catch (e: IOException) {
             return Result.failure(e)
